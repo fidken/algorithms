@@ -10,7 +10,7 @@ function radixSort(arr) {
 
     // Перебираем все разряды, начиная с нулевого
     for (let i = 0; i < maxDigits; i++) {
-        console.log(`✅ Номер разряда → ${i}`);
+        console.log(`Номер разряда → ${i}`);
         
         // Перебираем все элементы в массиве
         for (let x of arr) {
