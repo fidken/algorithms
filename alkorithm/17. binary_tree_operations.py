@@ -1,129 +1,151 @@
-from typing import Any  # Импорт модуля для аннотации типов
+import matplotlib.pyplot as plt
+import networkx as nx
 
-# Класс для представления узла бинарного дерева
+def draw_tree(root):
+    """Отрисовка бинарного дерева с использованием NetworkX и Matplotlib."""
+    def add_edges(graph, node, pos, x=0, y=0, layer=1):
+        """Рекурсивное добавление узлов и рёбер в граф."""
+        if node:
+            graph.add_node(node.value, pos=(x, y))
+            if node.left:
+                graph.add_edge(node.value, node.left.value)
+                add_edges(graph, node.left, pos, x - 1 / layer, y - 1, layer * 1.5)
+            if node.right:
+                graph.add_edge(node.value, node.right.value)
+                add_edges(graph, node.right, pos, x + 1 / layer, y - 1, layer * 1.5)
+    
+    G = nx.DiGraph()
+    add_edges(G, root, {})
+    
+    pos = nx.get_node_attributes(G, 'pos')
+    labels = {node: str(node) for node in G.nodes()}
+    
+    plt.figure(figsize=(10, 6))
+    nx.draw(G, pos, with_labels=True, labels=labels, node_size=3000, node_color="lightblue", font_size=10, font_weight="bold")
+    plt.show()
+
+
 class Node:
     def __init__(self, value):
-        self.value = value  # Значение узла
-        self.left = None  # Левый потомок
-        self.right = None  # Правый потомок
+        self.value = value
+        self.left = None
+        self.right = None
 
-# Класс для работы с бинарным деревом поиска (BST)
-class BST:
-    def __init__(self):
-        self.root = None  # Корень дерева
 
-    # Вспомогательный метод для вставки в дерево
-    def __insert(self, current, value) -> None:
-        if value < current.value:  # Если значение меньше текущего узла
-            if not current.left:  # Если у текущего узла нет левого потомка
-                current.left = Node(value)  # Создаем левый потомок
-            else:
-                self.__insert(current.left, value)  # Рекурсивно вставляем в левое поддерево
-        elif value > current.value:  # Если значение больше текущего узла
-            if not current.right:  # Если у текущего узла нет правого потомка
-                current.right = Node(value)  # Создаем правый потомок
-            else:
-                self.__insert(current.right, value)  # Рекурсивно вставляем в правое поддерево
-        else:
-            raise Exception(f"{value} already exists!!")  # Если значение уже существует, выбрасываем исключение
+def parse_tree(input_str):
+    """Функция для парсинга строки в дерево."""
+    def helper(data, i):
+        value = ""
+        while i < len(data) and (data[i].isdigit() or data[i] == '-'):
+            value += data[i]
+            i += 1
+        if not value:
+            return None, i
+        node = Node(int(value))
+        if i < len(data) and data[i] == '(':
+            node.left, i = helper(data, i + 1)
+            if i < len(data) and data[i] == ',':
+                node.right, i = helper(data, i + 1)
+        if i < len(data) and data[i] == ')':
+            i += 1
+        return node, i
+    
+    root, _ = helper(input_str, 0)
+    return root
 
-    # Публичный метод для вставки в дерево
-    def insert(self, value) -> None:
-        if not self.root:  # Если дерево пустое
-            self.root = Node(value)  # Устанавливаем значение в корень
-        else:
-            self.__insert(self.root, value)  # Вызываем вспомогательный метод
 
-    # Вспомогательный метод для поиска узла в дереве
-    def __search(self, value, parent, current) -> tuple | tuple[None, None] | Any | None:
-        if value == current.value:  # Если нашли нужное значение
-            return (parent, current)  # Возвращаем родителя и текущий узел
-        elif value < current.value:  # Если значение меньше текущего
-            if not current.left:  # Если нет левого потомка
-                return (None, None)  # Узел не найден
-            return self.__search(value, current, current.left)  # Рекурсивно ищем в левом поддереве
-        elif value > current.value:  # Если значение больше текущего
-            if not current.right:  # Если нет правого потомка
-                return (None, None)  # Узел не найден
-            return self.__search(value, current, current.right)  # Рекурсивно ищем в правом поддереве
+def add_node(root, value):
+    """Добавление узла в БДП."""
+    if not root:
+        return Node(value)
+    if value < root.value:
+        root.left = add_node(root.left, value)
+    elif value > root.value:
+        root.right = add_node(root.right, value)
+    return root
 
-    # Публичный метод для поиска узла в дереве
-    def search(self, value) -> tuple[None, None] | tuple | Any | None:
-        if not self.root:  # Если дерево пустое
-            return (None, None)  # Узел не найден
-        return self.__search(value, parent=self.root, current=self.root)  # Вызываем вспомогательный метод
 
-    # Вспомогательный метод для поиска узла с минимальным значением
-    def __minValueNode(self, node) -> Any:
-        current = node  # Начинаем с текущего узла
-        while current.left:  # Пока есть левый потомок
-            current = current.left  # Переходим к нему
-        return current  # Возвращаем узел с минимальным значением
+def find_node(root, value):
+    """Поиск узла в БДП."""
+    if not root:
+        return None
+    if value == root.value:
+        return root
+    elif value < root.value:
+        return find_node(root.left, value)
+    else:
+        return find_node(root.right, value)
 
-    # Вспомогательный метод для удаления узла из дерева
-    def __remove(self, root, value) -> Any | None:
-        if not root:  # Если узел не найден
-            return None
 
-        if value < root.value:  # Если значение меньше текущего
-            root.left = self.__remove(root.left, value)  # Рекурсивно удаляем из левого поддерева
-        elif value > root.value:  # Если значение больше текущего
-            root.right = self.__remove(root.right, value)  # Рекурсивно удаляем из правого поддерева
-        else:  # Если нашли нужный узел
-            if not root.left:  # Если нет левого потомка
-                temp = root.right  # Правый потомок заменяет текущий узел
-                root = None
-                return temp
-            elif not root.right:  # Если нет правого потомка
-                temp = root.left  # Левый потомок заменяет текущий узел
-                root = None
-                return temp
+def delete_node(root, value):
+    """Удаление узла из БДП."""
+    if not root:
+        return root
+    if value < root.value:
+        root.left = delete_node(root.left, value)
+    elif value > root.value:
+        root.right = delete_node(root.right, value)
+    else:
+        if not root.left:
+            return root.right
+        elif not root.right:
+            return root.left
+        min_larger_node = root.right
+        while min_larger_node.left:
+            min_larger_node = min_larger_node.left
+        root.value = min_larger_node.value
+        root.right = delete_node(root.right, root.value)
+    return root
 
-            successor = self.__minValueNode(root.right)  # Находим узел-наследник
-            root.value = successor.value  # Переносим значение наследника в текущий узел
-            root.right = self.__remove(root.right, successor.value)  # Удаляем наследника
-        return root  # Возвращаем обновленный узел
 
-    # Публичный метод для удаления узла
-    def remove(self, value) -> None:
-        self.__remove(self.root, value)  # Вызываем вспомогательный метод
+def tree_to_string(root):
+    """Преобразование дерева в линейно-скобочную запись."""
+    if not root:
+        return ""
+    left = tree_to_string(root.left)
+    right = tree_to_string(root.right)
+    return f"{root.value}({left},{right})" if left or right else str(root.value)
 
-    # Метод для нерекурсивного обхода дерева
-    def traverseNonRecursive(self) -> None:
-        from queue import LifoQueue  # Импорт стека
-        stack = LifoQueue()  # Инициализируем стек
-        stack.put(self.root)  # Кладем корень дерева в стек
-        while not stack.empty():  # Пока стек не пуст
-            current = stack.get()  # Извлекаем текущий узел
-            while current:  # Пока узел не None
-                print(current.value, end=' -- ')  # Выводим значение узла
-                if current.left:  # Если есть левый потомок
-                    stack.put(current.left)  # Кладем его в стек
-                current = current.right  # Переходим к правому потомку
 
-# Основная часть программы
-if __name__ == "__main__":
-    bst = BST()  # Создаем объект бинарного дерева поиска
+def main():
+    print("Введите бинарное дерево в линейно-скобочной записи:")
+    input_tree = input().strip()
+    tree = parse_tree(input_tree)
+    
     while True:
-        print(''' Введите номер команды, которую вы хотите выполнить:
-    1) вставьте вершины по значениям
-    2) выполните поиск в вершинах по значениям
-    3) удалите вершины по значениям
-    4) выполните переход (используя нерекурсивный метод)
-    0) Завершите''')
-        command = input()  # Читаем команду от пользователя
-        match command:  # Обрабатываем команды
-            case '1':
-                bst.insert(int(input('Пожалуйста, введите значения, которые вы хотите вставить: ')))  # Вставка значения
-            case '2':
-                parent, current = bst.search(int(input('Пожалуйста, введите значения вершины, которую вы ищете: ')));
-                print(f'Parent value is {parent.value}, searched value is {current.value}')  # Вывод результата поиска
-            case '3':
-                bst.remove(int(input('Пожалуйста, введите значение вершины, которую вы ищете: ')))  # Удаление узла
-            case '4':
-                bst.traverseNonRecursive()  # Нерекурсивный обход дерева
-            case '0':
-                break  # Завершение программы
-            case _:
-                continue  # Игнорируем некорректные команды
-    bst.traverseNonRecursive()  # Вызываем обход дерева перед завершением программы
+        print("\nМеню:")
+        print("1. Поиск узла")
+        print("2. Добавление узла")
+        print("3. Удаление узла")
+        print("4. Показать дерево")
+        print("5. Выход")
+        print("6. Показать дерево (графически)")
+        
+        choice = input("Ваш выбор: ").strip()
+        if choice == '1':
+            value = int(input("Введите значение для поиска: "))
+            result = find_node(tree, value)
+            print("Найдено" if result else "Не найдено")
+        elif choice == '2':
+            value = int(input("Введите значение для добавления: "))
+            tree = add_node(tree, value)
+        elif choice == '3':
+            value = int(input("Введите значение для удаления: "))
+            tree = delete_node(tree, value)
+        elif choice == '4':
+            print("Текущее дерево:", tree_to_string(tree))
+        elif choice == '5':
+            print("Завершение программы. Итоговое дерево:")
+            print(tree_to_string(tree))
+            break
+        elif choice == '6':
+            if tree:
+                draw_tree(tree)
+            else:
+                print("Дерево пустое!")
+        else:
+            print("Неверный выбор. Попробуйте снова.")
+
+
+if __name__ == "__main__":
+    main()
